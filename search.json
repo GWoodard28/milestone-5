@@ -1,0 +1,65 @@
+[
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About & Full Data Explorer",
+    "section": "",
+    "text": "NFL Weekly Injury Reports (2010–2026): 88,730 weekly injury records from nflverse/nflverse-data, covering player names, teams, positions, primary injuries, and game statuses across 17 seasons.\nNFL Playing Surface Analytics (elijah24/nfl-injuries): 105 detailed lower-extremity injury records (InjuryRecord.csv) and 267,005 play records (PlayList.csv) comparing Natural vs. Synthetic turf surfaces and injury severity (DM_M1 through DM_M42).\nMultimodal Sports Injury Telemetry (anjalibhegam/multimodal-sports-injury-dataset): Biometric and biomechanical sensor readings including heart rate, ground reaction force (GRF), joint flexion angles, fatigue index, recovery score, and hydration level.\nU.S. Census Bureau American Community Survey (tidycensus): Live state-level population, median household income, and median age fetched via the Census API for each NFL team’s home state."
+  },
+  {
+    "objectID": "about.html#data-sources",
+    "href": "about.html#data-sources",
+    "title": "About & Full Data Explorer",
+    "section": "",
+    "text": "NFL Weekly Injury Reports (2010–2026): 88,730 weekly injury records from nflverse/nflverse-data, covering player names, teams, positions, primary injuries, and game statuses across 17 seasons.\nNFL Playing Surface Analytics (elijah24/nfl-injuries): 105 detailed lower-extremity injury records (InjuryRecord.csv) and 267,005 play records (PlayList.csv) comparing Natural vs. Synthetic turf surfaces and injury severity (DM_M1 through DM_M42).\nMultimodal Sports Injury Telemetry (anjalibhegam/multimodal-sports-injury-dataset): Biometric and biomechanical sensor readings including heart rate, ground reaction force (GRF), joint flexion angles, fatigue index, recovery score, and hydration level.\nU.S. Census Bureau American Community Survey (tidycensus): Live state-level population, median household income, and median age fetched via the Census API for each NFL team’s home state."
+  },
+  {
+    "objectID": "about.html#summary-counts-by-season-20102026",
+    "href": "about.html#summary-counts-by-season-20102026",
+    "title": "About & Full Data Explorer",
+    "section": "Summary Counts by Season (2010–2026)",
+    "text": "Summary Counts by Season (2010–2026)"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2010–2026)",
+    "section": "",
+    "text": "Launch 3D Interactive Tackle & Injury Replay →"
+  },
+  {
+    "objectID": "index.html#project-overview",
+    "href": "index.html#project-overview",
+    "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2010–2026)",
+    "section": "Project Overview",
+    "text": "Project Overview\nThis project combines 88,835 NFL injury records from 2010 through 2026 (nflverse-data and the NFL Playing Surface Analytics study) with multimodal athlete sensor telemetry and live annual U.S. Census Bureau (ACS) state demographics via tidycensus."
+  },
+  {
+    "objectID": "index.html#nfl-reported-injuries-by-season-20102026",
+    "href": "index.html#nfl-reported-injuries-by-season-20102026",
+    "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2010–2026)",
+    "section": "NFL Reported Injuries by Season (2010–2026)",
+    "text": "NFL Reported Injuries by Season (2010–2026)"
+  },
+  {
+    "objectID": "index.html#most-common-nfl-primary-injuries-20102026",
+    "href": "index.html#most-common-nfl-primary-injuries-20102026",
+    "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2010–2026)",
+    "section": "Most Common NFL Primary Injuries (2010–2026)",
+    "text": "Most Common NFL Primary Injuries (2010–2026)"
+  },
+  {
+    "objectID": "index.html#lower-extremity-injuries-synthetic-vs.-natural-turf",
+    "href": "index.html#lower-extremity-injuries-synthetic-vs.-natural-turf",
+    "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2010–2026)",
+    "section": "Lower-Extremity Injuries: Synthetic vs. Natural Turf",
+    "text": "Lower-Extremity Injuries: Synthetic vs. Natural Turf"
+  },
+  {
+    "objectID": "index.html#interactive-data-tables",
+    "href": "index.html#interactive-data-tables",
+    "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2010–2026)",
+    "section": "Interactive Data Tables",
+    "text": "Interactive Data Tables\n\nNFL Injury Reports (2010–2026)Turf Injury Study (InjuryRecord.csv)Multimodal Athlete TelemetryLive U.S. Census State Demographics (tidycensus)"
+  }
+]

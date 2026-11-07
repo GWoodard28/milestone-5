@@ -1,0 +1,38 @@
+/* Force white font color across pages, DataTables, and inputs */
+body, p, h1, h2, h3, h4, h5, h6, li, span, label, th, td,
+.dataTables_wrapper,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_processing,
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .dataTables_paginate .paginate_button,
+table.dataTable thead th,
+table.dataTable thead td,
+table.dataTable tbody th,
+table.dataTable tbody td {
+  color: #ffffff !important;
+}
+
+table.dataTable tbody tr,
+table.dataTable.stripe tbody tr.odd,
+table.dataTable.display tbody tr.odd,
+table.dataTable.hover tbody tr:hover,
+table.dataTable.display tbody tr:hover {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.dataTables_wrapper input,
+.dataTables_wrapper select,
+table.dataTable thead input,
+table.dataTable thead select {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border: 1px solid #475569 !important;
+}
+
+.nav-tabs .nav-link,
+.nav-tabs .nav-link.active {
+  color: #ffffff !important;
+}
