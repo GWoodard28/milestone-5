@@ -35,25 +35,25 @@
     "text": "Project Overview\nThis project combines 133,655 NFL injury records from 2000 through 2026 (nflverse-data and the NFL Playing Surface Analytics study) with multimodal athlete sensor telemetry and live annual U.S. Census Bureau (ACS) state demographics via tidycensus."
   },
   {
-    "objectID": "index.html#individual-nfl-player-week-injury-reports-across-seasons-20002026",
-    "href": "index.html#individual-nfl-player-week-injury-reports-across-seasons-20002026",
+    "objectID": "index.html#nfl-weekly-games-missed-by-injury-type-across-seasons",
+    "href": "index.html#nfl-weekly-games-missed-by-injury-type-across-seasons",
     "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2000–2026)",
-    "section": "Individual NFL Player-Week Injury Reports Across Seasons (2000–2026)",
-    "text": "Individual NFL Player-Week Injury Reports Across Seasons (2000–2026)"
+    "section": "NFL Weekly Games Missed by Injury Type Across Seasons",
+    "text": "NFL Weekly Games Missed by Injury Type Across Seasons"
   },
   {
-    "objectID": "index.html#week-of-season-vs.-games-missed-listed-by-injury-type-20002026",
-    "href": "index.html#week-of-season-vs.-games-missed-listed-by-injury-type-20002026",
+    "objectID": "index.html#total-injury-reports-vs.-games-missed-that-week",
+    "href": "index.html#total-injury-reports-vs.-games-missed-that-week",
     "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2000–2026)",
-    "section": "Week of Season vs. Games Missed / Listed by Injury Type (2000–2026)",
-    "text": "Week of Season vs. Games Missed / Listed by Injury Type (2000–2026)"
+    "section": "Total Injury Reports vs. Games Missed That Week",
+    "text": "Total Injury Reports vs. Games Missed That Week"
   },
   {
-    "objectID": "index.html#athlete-biomechanics-age-interactive-telemetry-scatterplot",
-    "href": "index.html#athlete-biomechanics-age-interactive-telemetry-scatterplot",
+    "objectID": "index.html#athlete-biomechanics-fatigue-index-vs.-ground-reaction-force-scatterplot",
+    "href": "index.html#athlete-biomechanics-fatigue-index-vs.-ground-reaction-force-scatterplot",
     "title": "NFL Player Injuries, Turf Biomechanics & U.S. Census Analysis (2000–2026)",
-    "section": "Athlete Biomechanics & Age: Interactive Telemetry Scatterplot",
-    "text": "Athlete Biomechanics & Age: Interactive Telemetry Scatterplot"
+    "section": "Athlete Biomechanics: Fatigue Index vs. Ground Reaction Force Scatterplot",
+    "text": "Athlete Biomechanics: Fatigue Index vs. Ground Reaction Force Scatterplot"
   },
   {
     "objectID": "index.html#interactive-data-tables",
