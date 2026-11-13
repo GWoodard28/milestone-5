@@ -157,6 +157,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
   <div class="flex flex-wrap items-center justify-between gap-3 pointer-events-auto">
     <div class="glass-panel px-5 py-2.5 rounded-2xl flex items-center gap-3.5 shadow-xl">
       <a href="index.html" class="bg-slate-800 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-xl text-xs font-semibold transition no-underline">← Home &amp; Charts</a>
+      <a href="story.html" class="bg-slate-800 hover:bg-amber-500/35 text-amber-300 border border-amber-400/40 px-3 py-1.5 rounded-xl text-xs font-semibold transition no-underline">📖 Story</a>
       <button onclick="toggleDataModal()" class="bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-300 border border-cyan-400/40 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer">📊 View Data Table</button>
       <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
       <div>
@@ -441,21 +442,23 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
     WAS: { jersey: 0x5A1414, helmet: 0x5A1414, pants: 0xFFB612, hex: '#5A1414' }
   };
 
-  // Three.js Scene & Renderer with Real Dynamic Shadows
+  // Three.js Scene & Renderer with ACES Filmic Tone Mapping & Soft Shadows
   const container = document.getElementById('canvas-container');
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x050811);
-  scene.fog = new THREE.FogExp2(0x050811, 0.05);
+  scene.background = new THREE.Color(0x040711);
+  scene.fog = new THREE.FogExp2(0x050914, 0.022);
 
   const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0.2, 1.65, 4.3);
+  camera.position.set(0.25, 1.68, 4.35);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.18;
   container.appendChild(renderer.domElement);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -463,172 +466,431 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
+  controls.maxDistance = 16;
+  controls.minDistance = 0.85;
 
-  // Stadium Lighting Rig
-  scene.add(new THREE.HemisphereLight(0xe0f2fe, 0x0f172a, 0.9));
+  // Multi-Bank NFL Prime-Time Stadium Lighting Rig
+  scene.add(new THREE.HemisphereLight(0xdbeafe, 0x09131f, 0.72));
 
-  const stadiumSpot = new THREE.DirectionalLight(0xffffff, 1.8);
-  stadiumSpot.position.set(4, 9, 5);
+  const stadiumSpot = new THREE.DirectionalLight(0xfff7ed, 2.15);
+  stadiumSpot.position.set(5.5, 11.5, 6.5);
   stadiumSpot.castShadow = true;
   stadiumSpot.shadow.mapSize.width = 2048;
   stadiumSpot.shadow.mapSize.height = 2048;
   stadiumSpot.shadow.camera.near = 0.5;
-  stadiumSpot.shadow.camera.far = 25;
-  const d = 5;
+  stadiumSpot.shadow.camera.far = 30;
+  stadiumSpot.shadow.bias = -0.0004;
+  const d = 5.5;
   stadiumSpot.shadow.camera.left = -d;
   stadiumSpot.shadow.camera.right = d;
   stadiumSpot.shadow.camera.top = d;
   stadiumSpot.shadow.camera.bottom = -d;
   scene.add(stadiumSpot);
 
-  const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.1);
-  rimLight.position.set(-5, 4, -4);
+  const crossSpot = new THREE.DirectionalLight(0xe0f2fe, 1.25);
+  crossSpot.position.set(-6.5, 10.0, 4.0);
+  scene.add(crossSpot);
+
+  const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.15);
+  rimLight.position.set(-4, 5, -7);
   scene.add(rimLight);
 
-  // Procedural High-Res NFL Field Texture (Mowed Stripes, Yard Lines, Hash Marks)
-  function createNFLFieldTexture(isSynthetic) {
+  // Dynamic Collision Flash Light at Impact Point
+  const impactFlashLight = new THREE.PointLight(0xf97316, 0, 5.5, 2);
+  scene.add(impactFlashLight);
+
+  // Procedural High-Res NFL Field Texture + Grass Fiber Bump Map (Yard Numbers, Hash Marks, Sidelines)
+  function createNFLFieldMaps(isSynthetic) {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
+    canvas.width = 2048;
+    canvas.height = 2048;
     const ctx = canvas.getContext('2d');
 
-    const numStripes = 16;
+    const bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = 512;
+    bumpCanvas.height = 512;
+    const bctx = bumpCanvas.getContext('2d');
+
+    // Grass / turf blade micro-grain bump texture
+    const imgData = bctx.createImageData(512, 512);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      const grain = isSynthetic ? (115 + ((i * 17) % 45)) : (90 + ((i * 31) % 85));
+      imgData.data[i] = grain;
+      imgData.data[i + 1] = grain;
+      imgData.data[i + 2] = grain;
+      imgData.data[i + 3] = 255;
+    }
+    bctx.putImageData(imgData, 0, 0);
+    const bumpTex = new THREE.CanvasTexture(bumpCanvas);
+    bumpTex.wrapS = THREE.RepeatWrapping;
+    bumpTex.wrapT = THREE.RepeatWrapping;
+    bumpTex.repeat.set(14, 14);
+
+    const numStripes = 20;
     const stripeH = canvas.height / numStripes;
     for (let i = 0; i < numStripes; i++) {
       if (isSynthetic) {
-        ctx.fillStyle = i % 2 === 0 ? '#0d4a29' : '#0f5730';
+        ctx.fillStyle = i % 2 === 0 ? '#0b4627' : '#0e5430';
       } else {
-        ctx.fillStyle = i % 2 === 0 ? '#14532d' : '#186337';
+        ctx.fillStyle = i % 2 === 0 ? '#15562f' : '#1b6839';
       }
       ctx.fillRect(0, i * stripeH, canvas.width, stripeH);
     }
 
-    // Crisp White Yard Lines & Hash Marks
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+    // Subtle turf wear & blade streaks
+    ctx.fillStyle = isSynthetic ? 'rgba(0,0,0,0.06)' : 'rgba(30,20,10,0.08)';
+    for (let s = 0; s < 900; s++) {
+      const rx = (s * 173) % canvas.width;
+      const ry = (s * 293) % canvas.height;
+      ctx.fillRect(rx, ry, 18, 3);
+    }
+
+    // White Sideline Borders
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.92)';
+    ctx.fillRect(0, 0, 34, canvas.height);
+    ctx.fillRect(canvas.width - 34, 0, 34, canvas.height);
+
+    // Crisp White Yard Lines, Hash Marks & Stenciled NFL Yard Numbers
+    const yardLabels = ['1 0', '2 0', '3 0', '4 0', '5 0', '4 0', '3 0', '2 0', '1 0'];
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
+    ctx.font = 'bold 52px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
     for (let i = 0; i <= numStripes; i++) {
       const y = i * stripeH;
-      ctx.lineWidth = i % 2 === 0 ? 5 : 2;
+      ctx.lineWidth = i % 2 === 0 ? 7 : 3.5;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
+      ctx.moveTo(34, y);
+      ctx.lineTo(canvas.width - 34, y);
       ctx.stroke();
 
-      // NFL middle hash marks
-      ctx.lineWidth = 3;
-      for (let h = 1; h < 5; h++) {
-        const hy = y + (h * stripeH) / 5;
-        ctx.beginPath();
-        ctx.moveTo(canvas.width * 0.36, hy);
-        ctx.lineTo(canvas.width * 0.38, hy);
-        ctx.moveTo(canvas.width * 0.62, hy);
-        ctx.lineTo(canvas.width * 0.64, hy);
-        ctx.stroke();
+      // Stenciled NFL yardage numbers on every 10-yard line
+      if (i % 2 === 0 && i > 0 && i < numStripes) {
+        const label = yardLabels[(i / 2 - 1) % yardLabels.length];
+        ctx.save();
+        ctx.translate(canvas.width * 0.16, y - 6);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(canvas.width * 0.84, y - 6);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+
+      // NFL middle & sideline hash marks
+      if (i < numStripes) {
+        ctx.lineWidth = 4;
+        for (let h = 1; h < 5; h++) {
+          const hy = y + (h * stripeH) / 5;
+          ctx.beginPath();
+          ctx.moveTo(42, hy); ctx.lineTo(66, hy);
+          ctx.moveTo(canvas.width - 66, hy); ctx.lineTo(canvas.width - 42, hy);
+          ctx.moveTo(canvas.width * 0.41, hy); ctx.lineTo(canvas.width * 0.43, hy);
+          ctx.moveTo(canvas.width * 0.57, hy); ctx.lineTo(canvas.width * 0.59, hy);
+          ctx.stroke();
+        }
       }
     }
 
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = 8;
-    return tex;
+    const colorTex = new THREE.CanvasTexture(canvas);
+    colorTex.anisotropy = 8;
+    return { colorTex, bumpTex };
   }
 
-  const naturalTurfTex = createNFLFieldTexture(false);
-  const syntheticTurfTex = createNFLFieldTexture(true);
+  const naturalMaps = createNFLFieldMaps(false);
+  const syntheticMaps = createNFLFieldMaps(true);
 
-  const turfGeo = new THREE.PlaneGeometry(18, 18);
+  const turfGeo = new THREE.PlaneGeometry(34, 48);
   const turfMat = new THREE.MeshStandardMaterial({
-    map: syntheticTurfTex,
-    roughness: 0.85,
-    metalness: 0.05
+    map: syntheticMaps.colorTex,
+    bumpMap: syntheticMaps.bumpTex,
+    bumpScale: 0.016,
+    roughness: 0.82,
+    metalness: 0.04
   });
   const turfMesh = new THREE.Mesh(turfGeo, turfMat);
   turfMesh.rotation.x = -Math.PI / 2;
   turfMesh.receiveShadow = true;
   scene.add(turfMesh);
 
+  // Surrounding Dark Stadium Track Apron
+  const apronMesh = new THREE.Mesh(
+    new THREE.RingGeometry(22, 55, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0b1120, roughness: 0.95 })
+  );
+  apronMesh.rotation.x = -Math.PI / 2;
+  apronMesh.position.y = -0.01;
+  scene.add(apronMesh);
+
+  // 3D NFL Stadium Bowl, Team LED Ribbon Board, Goalposts & Floodlight Towers
+  const stadiumGroup = new THREE.Group();
+  const bowlMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85, side: THREE.DoubleSide });
+  const lowerBowl = new THREE.Mesh(new THREE.CylinderGeometry(33, 25, 6.5, 64, 1, true), bowlMat);
+  lowerBowl.position.y = 3.1;
+  stadiumGroup.add(lowerBowl);
+
+  const upperBowl = new THREE.Mesh(new THREE.CylinderGeometry(42, 34, 8.0, 64, 1, true), bowlMat);
+  upperBowl.position.y = 10.5;
+  stadiumGroup.add(upperBowl);
+
+  const ribbonMat = new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide });
+  const ledRibbon = new THREE.Mesh(new THREE.CylinderGeometry(33.3, 33.3, 0.45, 64, 1, true), ribbonMat);
+  ledRibbon.position.y = 6.45;
+  stadiumGroup.add(ledRibbon);
+
+  // 900 Stadium Crowd Points + Camera Flash Strobe Effect
+  const crowdCount = 900;
+  const crowdPositions = new Float32Array(crowdCount * 3);
+  const crowdColors = new Float32Array(crowdCount * 3);
+  for (let i = 0; i < crowdCount; i++) {
+    const ang = (i / crowdCount) * Math.PI * 2 + (i % 7) * 0.13;
+    const tier = i % 2 === 0;
+    const rad = tier ? (26 + (i % 9) * 0.75) : (34.5 + (i % 9) * 0.78);
+    const ht = tier ? (0.8 + (i % 9) * 0.6) : (7.0 + (i % 9) * 0.78);
+    crowdPositions[i * 3] = Math.cos(ang) * rad;
+    crowdPositions[i * 3 + 1] = ht;
+    crowdPositions[i * 3 + 2] = Math.sin(ang) * rad;
+    crowdColors[i * 3] = 0.65;
+    crowdColors[i * 3 + 1] = 0.75;
+    crowdColors[i * 3 + 2] = 0.92;
+  }
+  const crowdGeo = new THREE.BufferGeometry();
+  crowdGeo.setAttribute('position', new THREE.BufferAttribute(crowdPositions, 3));
+  crowdGeo.setAttribute('color', new THREE.BufferAttribute(crowdColors, 3));
+  const crowdPoints = new THREE.Points(
+    crowdGeo,
+    new THREE.PointsMaterial({ size: 0.22, vertexColors: true, transparent: true, opacity: 0.75 })
+  );
+  stadiumGroup.add(crowdPoints);
+
+  // NFL Optic-Yellow Goalposts at Both Endzones
+  function createGoalpost(zPos) {
+    const gp = new THREE.Group();
+    const yellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0x713f12, emissiveIntensity: 0.25, roughness: 0.3, metalness: 0.4 });
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 3.05, 14), yellowMat);
+    post.position.set(0, 1.52, 0);
+    gp.add(post);
+    const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 5.6, 14), yellowMat);
+    crossbar.rotation.z = Math.PI / 2;
+    crossbar.position.set(0, 3.05, 0);
+    gp.add(crossbar);
+    [-2.8, 2.8].forEach(xOff => {
+      const upright = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 6.2, 12), yellowMat);
+      upright.position.set(xOff, 6.15, 0);
+      gp.add(upright);
+    });
+    gp.position.set(0, 0, zPos);
+    return gp;
+  }
+  stadiumGroup.add(createGoalpost(-23.2));
+  stadiumGroup.add(createGoalpost(23.2));
+
+  // 4 Overhead Stadium Floodlight Towers
+  [[-24, -24], [24, -24], [-24, 24], [24, 24]].forEach(([tx, tz]) => {
+    const mast = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.45, 22, 10),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.4 })
+    );
+    mast.position.set(tx, 11, tz);
+    stadiumGroup.add(mast);
+
+    const bank = new THREE.Mesh(
+      new THREE.BoxGeometry(3.8, 1.4, 0.5),
+      new THREE.MeshBasicMaterial({ color: 0xfef9c3 })
+    );
+    bank.position.set(tx, 21.8, tz);
+    bank.lookAt(0, 1, 0);
+    stadiumGroup.add(bank);
+  });
+  scene.add(stadiumGroup);
+
   // Glowing Next Gen Stats Route Curves on the Turf
   const routePoints = [
-    new THREE.Vector3(-1.8, 0.015, -2.1),
-    new THREE.Vector3(-0.8, 0.015, -0.95),
-    new THREE.Vector3(0.0, 0.015, 0.0),
-    new THREE.Vector3(0.7, 0.015, 0.45)
+    new THREE.Vector3(-1.8, 0.018, -2.1),
+    new THREE.Vector3(-0.8, 0.018, -0.95),
+    new THREE.Vector3(0.0, 0.018, 0.0),
+    new THREE.Vector3(0.7, 0.018, 0.45)
   ];
   const routeCurve = new THREE.CatmullRomCurve3(routePoints);
   const routeMesh = new THREE.Mesh(
-    new THREE.TubeGeometry(routeCurve, 48, 0.025, 8, false),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 })
+    new THREE.TubeGeometry(routeCurve, 48, 0.024, 8, false),
+    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.82 })
   );
   scene.add(routeMesh);
 
   const defRoutePoints = [
-    new THREE.Vector3(2.2, 0.015, 1.45),
-    new THREE.Vector3(1.15, 0.015, 0.72),
-    new THREE.Vector3(0.22, 0.015, 0.06),
-    new THREE.Vector3(-0.4, 0.015, -0.25)
+    new THREE.Vector3(2.2, 0.018, 1.45),
+    new THREE.Vector3(1.15, 0.018, 0.72),
+    new THREE.Vector3(0.22, 0.018, 0.06),
+    new THREE.Vector3(-0.4, 0.018, -0.25)
   ];
   const defRouteCurve = new THREE.CatmullRomCurve3(defRoutePoints);
   const defRouteMesh = new THREE.Mesh(
-    new THREE.TubeGeometry(defRouteCurve, 48, 0.025, 8, false),
-    new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.8 })
+    new THREE.TubeGeometry(defRouteCurve, 48, 0.024, 8, false),
+    new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.82 })
   );
   scene.add(defRouteMesh);
 
-  // Build Detailed 3D NFL Helmet Attachment (Shell, Visor, Multi-Bar Facemask)
-  function createNFLHelmet(shellMat) {
+  // Build Hyper-Realistic 3D NFL Helmet (Metallic Shell, Center Stripe, Iridescent Visor, Chinstrap & Multi-Bar Cage)
+  function createNFLHelmet(shellMat, stripeHex) {
     const group = new THREE.Group();
-    const darkVisorMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.08, metalness: 0.92 });
-    const cageMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.25, metalness: 0.85 });
+    const darkVisorMat = new THREE.MeshStandardMaterial({ color: 0x060b16, roughness: 0.05, metalness: 0.96 });
+    const cageMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.22, metalness: 0.88 });
+    const stripeMat = new THREE.MeshStandardMaterial({ color: stripeHex, roughness: 0.25, metalness: 0.4 });
 
-    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.145, 24, 24), shellMat);
-    shell.scale.set(0.95, 1.04, 1.12);
-    shell.position.set(0, 0.06, 0.01);
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.148, 28, 28), shellMat);
+    shell.scale.set(0.96, 1.05, 1.14);
+    shell.position.set(0, 0.06, 0.008);
     shell.castShadow = true;
     group.add(shell);
 
-    const visor = new THREE.Mesh(new THREE.SphereGeometry(0.132, 20, 16), darkVisorMat);
-    visor.scale.set(0.92, 0.55, 0.92);
-    visor.position.set(0, 0.05, 0.055);
+    // Center Racing Stripe across Helmet Crown
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.146, 0.014, 8, 24, Math.PI * 1.15), stripeMat);
+    stripe.rotation.y = Math.PI / 2;
+    stripe.rotation.z = -0.3;
+    stripe.position.set(0, 0.062, 0.008);
+    group.add(stripe);
+
+    // Pro Tinted Shield Visor
+    const visor = new THREE.Mesh(new THREE.SphereGeometry(0.134, 22, 18), darkVisorMat);
+    visor.scale.set(0.93, 0.52, 0.94);
+    visor.position.set(0, 0.052, 0.058);
     group.add(visor);
 
-    // 3-Bar NFL Facemask Cage
-    [-0.01, -0.04, -0.07].forEach(yOff => {
-      const bar = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.008, 8, 18, Math.PI), cageMat);
-      bar.position.set(0, yOff + 0.03, 0.075);
-      bar.rotation.x = Math.PI / 2 + 0.15;
+    // 4-Bar NFL Facemask Cage + Vertical Center Guard
+    [0.005, -0.022, -0.048, -0.075].forEach(yOff => {
+      const bar = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.007, 8, 20, Math.PI), cageMat);
+      bar.position.set(0, yOff + 0.032, 0.075);
+      bar.rotation.x = Math.PI / 2 + 0.14;
       group.add(bar);
     });
-    return group;
+    const centerBar = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.09, 8), cageMat);
+    centerBar.position.set(0, -0.005, 0.172);
+    centerBar.rotation.x = 0.12;
+    group.add(centerBar);
+
+    // Molded White Chinstrap
+    const chin = new THREE.Mesh(
+      new THREE.TorusGeometry(0.088, 0.009, 8, 16, Math.PI * 0.85),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })
+    );
+    chin.position.set(0, -0.035, 0.045);
+    chin.rotation.x = Math.PI / 2 + 0.35;
+    group.add(chin);
+
+    return { group, stripeMat };
   }
 
-  const carrierArmorMat = new THREE.MeshStandardMaterial({ color: 0x97233F, roughness: 0.35, metalness: 0.3, skinning: true });
-  const carrierUnderMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.15, skinning: true });
-  const carrierHelmetMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.18, metalness: 0.55 });
+  // Dynamic NFL Jersey Number Plate Texture + Molded Shoulder Pad Rig
+  function createJerseyNumberCanvas(numText, bgHex, textHex) {
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 256;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = bgHex;
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(10, 10, 236, 236);
+    ctx.fillStyle = textHex;
+    ctx.font = '900 138px Impact, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(numText), 128, 136);
+    const tex = new THREE.CanvasTexture(c);
+    return { canvas: c, tex };
+  }
 
-  const defArmorMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4, metalness: 0.25, skinning: true });
-  const defUnderMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5, metalness: 0.2, skinning: true });
-  const defHelmetMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.6 });
+  function createShoulderPadRig(jerseyMat, numberTex) {
+    const rig = new THREE.Group();
+    // Left & Right Sculpted NFL Shoulder Pad Caps
+    [-0.18, 0.18].forEach(xOff => {
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.115, 18, 16), jerseyMat);
+      cap.scale.set(1.18, 0.72, 1.12);
+      cap.position.set(xOff, 0.13, 0.0);
+      cap.castShadow = true;
+      rig.add(cap);
+    });
+    // Padded Upper Torso Shell
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.28, 0.23), jerseyMat);
+    chest.position.set(0, 0.02, 0.01);
+    chest.castShadow = true;
+    rig.add(chest);
 
-  const carrierHelmet = createNFLHelmet(carrierHelmetMat);
+    const numMat = new THREE.MeshStandardMaterial({ map: numberTex, roughness: 0.45, metalness: 0.1 });
+    const frontNum = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.21), numMat);
+    frontNum.position.set(0, 0.02, 0.128);
+    rig.add(frontNum);
+
+    const backNum = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), numMat);
+    backNum.position.set(0, 0.03, -0.108);
+    backNum.rotation.y = Math.PI;
+    rig.add(backNum);
+
+    return { rig, numMat };
+  }
+
+  const carrierArmorMat = new THREE.MeshStandardMaterial({ color: 0x97233F, roughness: 0.36, metalness: 0.22, skinning: true });
+  const carrierPadMat = new THREE.MeshStandardMaterial({ color: 0x97233F, roughness: 0.36, metalness: 0.22 });
+  const carrierUnderMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.48, metalness: 0.12, skinning: true });
+  const carrierHelmetMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.14, metalness: 0.68 });
+
+  const defArmorMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4, metalness: 0.2, skinning: true });
+  const defPadMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4, metalness: 0.2 });
+  const defUnderMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.48, metalness: 0.18, skinning: true });
+  const defHelmetMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.16, metalness: 0.68 });
+
+  const carrierHelmetObj = createNFLHelmet(carrierHelmetMat, 0x97233F);
+  const carrierHelmet = carrierHelmetObj.group;
   scene.add(carrierHelmet);
 
-  const defHelmet = createNFLHelmet(defHelmetMat);
+  const defHelmetObj = createNFLHelmet(defHelmetMat, 0xef4444);
+  const defHelmet = defHelmetObj.group;
   scene.add(defHelmet);
 
-  // Tucked 3D Football with Laces
+  const carrierNumObj = createJerseyNumberCanvas('18', '#97233F', '#ffffff');
+  const carrierPads = createShoulderPadRig(carrierPadMat, carrierNumObj.tex);
+  scene.add(carrierPads.rig);
+
+  const defNumObj = createJerseyNumberCanvas('54', '#f8fafc', '#0f172a');
+  const defPads = createShoulderPadRig(defPadMat, defNumObj.tex);
+  scene.add(defPads.rig);
+
+  // Pro Laced Leather 3D NFL Football
   const footballGroup = new THREE.Group();
   const proBallMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 20, 20),
-    new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.55, metalness: 0.1 })
+    new THREE.SphereGeometry(0.082, 24, 24),
+    new THREE.MeshStandardMaterial({ color: 0x6b2710, roughness: 0.52, metalness: 0.12 })
   );
-  proBallMesh.scale.set(0.82, 0.82, 1.48);
+  proBallMesh.scale.set(0.80, 0.80, 1.48);
   proBallMesh.castShadow = true;
   footballGroup.add(proBallMesh);
+
+  // White NFL Football End Stripes & Raised Laces
+  const laceMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+  [-0.068, 0.068].forEach(zOff => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.048, 0.005, 8, 20), laceMat);
+    ring.position.z = zOff;
+    footballGroup.add(ring);
+  });
+  const seam = new THREE.Mesh(new THREE.BoxGeometry(0.007, 0.008, 0.075), laceMat);
+  seam.position.set(0, 0.065, 0);
+  footballGroup.add(seam);
+  for (let l = -3; l <= 3; l++) {
+    const crossLace = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.008, 0.005), laceMat);
+    crossLace.position.set(0, 0.066, l * 0.01);
+    footballGroup.add(crossLace);
+  }
   scene.add(footballGroup);
 
-  // Glowing Joint Sensor & Turf Shockwave & Flying Turf Debris Particles
+  // Glowing Joint Sensor, 3D Biomechanical Force Vector Arrow & Surface Debris
   const activeJointGlow = new THREE.Mesh(
-    new THREE.SphereGeometry(0.075, 20, 20),
+    new THREE.SphereGeometry(0.072, 20, 20),
     new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.85 })
   );
   scene.add(activeJointGlow);
@@ -640,30 +902,43 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
   scene.add(pulseRing);
 
   const shockMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide, transparent: true, opacity: 0.0 });
-  const shockRing = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.42, 40), shockMat);
+  const shockRing = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.44, 44), shockMat);
   shockRing.rotation.x = -Math.PI / 2;
   shockRing.position.set(0, 0.02, 0);
   scene.add(shockRing);
 
-  // 28 Flying Turf / Impact Spark Particles on Collision
+  // 3D Joint Shear / Ground Reaction Force Vector Arrow
+  const forceArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(-0.65, 0.72, -0.25).normalize(),
+    new THREE.Vector3(0, 0.5, 0),
+    0.85,
+    0xf43f5e,
+    0.22,
+    0.14
+  );
+  forceArrow.visible = false;
+  scene.add(forceArrow);
+
+  // 56 Surface-Specific Collision Debris Particles (SBR Crumb Rubber vs. Grass Sod & Sparks)
   const debrisGroup = new THREE.Group();
   const debrisList = [];
-  const debrisGeo = new THREE.BoxGeometry(0.028, 0.028, 0.028);
-  for (let i = 0; i < 28; i++) {
-    const isSpark = i % 3 === 0;
+  const debrisGeo = new THREE.BoxGeometry(0.024, 0.024, 0.024);
+  for (let i = 0; i < 56; i++) {
+    const isSpark = i % 4 === 0;
     const m = new THREE.MeshBasicMaterial({
-      color: isSpark ? 0xfbbf24 : 0x1e293b,
+      color: isSpark ? 0xfbbf24 : 0x111827,
       transparent: true,
       opacity: 0
     });
     const pMesh = new THREE.Mesh(debrisGeo, m);
-    const angle = (i / 28) * Math.PI * 2;
+    const angle = (i / 56) * Math.PI * 2 + (i % 3) * 0.2;
     debrisList.push({
       mesh: pMesh,
       mat: m,
-      vx: Math.cos(angle) * (0.4 + (i % 5) * 0.18),
-      vy: 0.65 + (i % 4) * 0.35,
-      vz: Math.sin(angle) * (0.4 + (i % 5) * 0.18)
+      isSpark,
+      vx: Math.cos(angle) * (0.35 + (i % 6) * 0.22),
+      vy: 0.55 + (i % 5) * 0.36,
+      vz: Math.sin(angle) * (0.35 + (i % 6) * 0.22)
     });
     debrisGroup.add(pMesh);
   }
@@ -761,7 +1036,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
   let xrayMode = false;
   function toggleXray() {
     xrayMode = !xrayMode;
-    [carrierArmorMat, carrierUnderMat, defArmorMat, defUnderMat, carrierHelmetMat, defHelmetMat].forEach(m => {
+    [carrierArmorMat, carrierPadMat, carrierUnderMat, defArmorMat, defPadMat, defUnderMat, carrierHelmetMat, defHelmetMat].forEach(m => {
       m.wireframe = xrayMode;
     });
     document.getElementById('xrayBtn').innerText = xrayMode ? 'X-Ray: On' : 'X-Ray: Off';
@@ -769,16 +1044,49 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
 
   let activeTarget = 'knee';
   let currentPlayer = null;
+  let cameraShake = 0;
 
-  function applyTeamColors(teamCode, surfaceType) {
+  function computeJerseyNumber(p) {
+    if (!p) return 18;
+    const pos = String(p.RosterPosition || 'WR').toUpperCase();
+    const seed = Number(p.row_id || 17);
+    if (pos.includes('QB')) return (seed % 18) + 1;
+    if (pos.includes('RB') || pos.includes('FB')) return (seed % 20) + 20;
+    if (pos.includes('TE')) return (seed % 10) + 80;
+    if (pos.includes('OL') || pos.includes('T') || pos.includes('G') || pos.includes('C')) return (seed % 25) + 55;
+    if (pos.includes('LB')) return (seed % 10) + 50;
+    if (pos.includes('DL') || pos.includes('DE') || pos.includes('DT')) return (seed % 10) + 90;
+    if (pos.includes('DB') || pos.includes('CB') || pos.includes('S')) return (seed % 18) + 21;
+    return (seed % 19) + 10; // WR / skill default
+  }
+
+  function applyTeamColors(teamCode, surfaceType, playerObj) {
     const palette = TEAM_COLORS[teamCode] || { jersey: 0x0f766e, helmet: 0xffffff, pants: 0xffffff, hex: '#10b981' };
     carrierArmorMat.color.setHex(palette.jersey);
+    carrierPadMat.color.setHex(palette.jersey);
     carrierHelmetMat.color.setHex(palette.helmet);
+    carrierHelmetObj.stripeMat.color.setHex(palette.jersey);
     carrierUnderMat.color.setHex(palette.pants);
+    ribbonMat.color.setHex(palette.jersey);
     document.getElementById('teamSwatch').style.backgroundColor = palette.hex;
 
-    turfMat.map = surfaceType === 'Synthetic' ? syntheticTurfTex : naturalTurfTex;
+    // Redraw dynamic NFL jersey number onto front/back shoulder pad plates
+    const jNum = computeJerseyNumber(playerObj);
+    const updatedNum = createJerseyNumberCanvas(jNum, palette.hex, '#ffffff');
+    carrierPads.numMat.map = updatedNum.tex;
+    carrierPads.numMat.needsUpdate = true;
+
+    const isSyn = surfaceType === 'Synthetic';
+    turfMat.map = isSyn ? syntheticMaps.colorTex : naturalMaps.colorTex;
+    turfMat.bumpMap = isSyn ? syntheticMaps.bumpTex : naturalMaps.bumpTex;
     turfMat.needsUpdate = true;
+
+    // Match cleat/impact debris to Synthetic SBR rubber pellets vs. Natural grass sod/dirt
+    debrisList.forEach((d, idx) => {
+      if (!d.isSpark) {
+        d.mat.color.setHex(isSyn ? 0x111827 : (idx % 2 === 0 ? 0x3f2e1e : 0x166534));
+      }
+    });
   }
 
   // =========================================================
@@ -787,6 +1095,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
   let isPlayingReplay = true;
   let replaySpeed = 0.45;
   let replayTime = 0;
+  let prevReplayTime = 0;
   const REPLAY_DURATION = 3.5;
 
   function updateSkeletalReplay(t) {
@@ -795,6 +1104,12 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
     const phaseEl = document.getElementById('replayPhaseText');
     const speedBadge = document.getElementById('liveSpeedBadge');
 
+    // Trigger broadcast camera shudder right as collision initiates
+    if (prevReplayTime < 1.65 && t >= 1.65) {
+      cameraShake = 0.048;
+    }
+    prevReplayTime = t;
+
     // Advance motion-captured run cycle base pose
     const animTime = Math.min(t, 1.75) * 1.35;
     carrierMixer.setTime(animTime);
@@ -802,6 +1117,11 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
 
     carrierRoot.rotation.set(0, 0, 0);
     defenderRoot.rotation.set(0, 0, 0);
+
+    const baseHR = currentPlayer ? Number(currentPlayer.heart_rate) : 148;
+    const peakGRF = currentPlayer ? Number(currentPlayer.grf) : 1860;
+    const peakAngle = currentPlayer ? Number(currentPlayer.joint_angle) : 126.5;
+    const peakStress = currentPlayer ? Number(currentPlayer.stress_level) : 42;
 
     if (t < 1.65) {
       // PHASE 1: Motion-Captured Sprint & Defender Pursuit Closing In
@@ -816,30 +1136,45 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
       defenderRoot.lookAt(pos.x, 0, pos.z);
 
       // Defender lowers shoulder pads as he closes in for the tackle
-      if (defenderBones.Spine1 && u > 0.6) {
-        defenderBones.Spine1.rotation.x += (u - 0.6) * 0.9;
+      if (defenderBones.Spine1 && u > 0.55) {
+        defenderBones.Spine1.rotation.x += (u - 0.55) * 0.95;
       }
 
       shockMat.opacity = 0;
+      impactFlashLight.intensity = 0;
+      forceArrow.visible = false;
       debrisList.forEach(d => { d.mat.opacity = 0; });
 
-      const spd = (6.8 + Math.sin(t * 3) * 1.3).toFixed(1);
+      // Live sprint telemetry ramp-up
+      document.getElementById('bioHR').innerText = Math.round(baseHR - 12 + u * 10);
+      document.getElementById('bioGRF').innerText = Math.round(620 + Math.abs(Math.sin(t * 9)) * 310);
+      document.getElementById('bioAngle').innerText = (95 + Math.sin(t * 8) * 18).toFixed(1);
+      document.getElementById('bioStress').innerText = Math.round(peakStress * 0.45 + u * 12);
+
+      const spd = (7.1 + Math.sin(t * 3) * 1.4).toFixed(1);
       speedBadge.innerText = `Closing Speed: ${spd} yd/s`;
-      phaseEl.innerText = 'Phase 1: Motion-Captured Sprint & Defender Pursuit Closing In';
+      phaseEl.innerText = 'Phase 1: Full-Speed Route Cut & Defender Closing Angle';
       phaseEl.className = 'text-xs font-semibold text-emerald-300';
     } else if (t < 2.40) {
       // PHASE 2: Direct Tackle Impact & Bone-Level Joint Deformation (1.65s -> 2.40s)
       const p = (t - 1.65) / 0.75; // 0 -> 1 through collision
-      shockMat.opacity = Math.sin(p * Math.PI) * 0.95;
-      const sScale = 0.8 + p * 2.6;
+      const impactBell = Math.sin(p * Math.PI);
+      shockMat.opacity = impactBell * 0.95;
+      const sScale = 0.8 + p * 2.8;
       shockRing.scale.set(sScale, sScale, 1);
+      impactFlashLight.intensity = impactBell * 3.2;
 
-      speedBadge.innerText = `HIT FORCE: ${currentPlayer ? currentPlayer.grf : 1860} N`;
+      // Peak biomechanical surge on collision
+      document.getElementById('bioHR').innerText = Math.round(baseHR + impactBell * 6);
+      document.getElementById('bioGRF').innerText = Math.round(peakGRF * (0.72 + 0.28 * impactBell));
+      document.getElementById('bioAngle').innerText = (peakAngle + impactBell * 8.4).toFixed(1);
+      document.getElementById('bioStress').innerText = Math.min(99, Math.round(peakStress + impactBell * 28));
+
+      speedBadge.innerText = `PEAK IMPACT: ${peakGRF} N`;
       phaseEl.className = 'text-xs font-semibold text-rose-400';
 
       if (activeTarget === 'knee') {
-        // Low Diving Tackle Directly Into the Right Knee (Valgus Buckle)
-        phaseEl.innerText = `💥 DIRECT HIT: Low Tackle Into Right ${currentPlayer ? currentPlayer.BodyPart : 'Knee'} (Valgus Buckle)`;
+        phaseEl.innerText = `💥 DIRECT HIT: Low Tackle Into Right ${currentPlayer ? currentPlayer.BodyPart : 'Knee'} (Valgus Shear)`;
         carrierRoot.position.set(-0.20 * p, -0.32 * p, -0.10 * p);
         carrierRoot.rotation.y = 0.45;
         carrierRoot.rotation.z = 0.28 * p;
@@ -851,25 +1186,23 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
         }
         if (carrierBones.RightLeg) {
           carrierBones.RightLeg.rotation.x = 0.95 * p;
-          carrierBones.RightLeg.rotation.z = -0.68 * p; // Forced inward knee valgus buckle!
+          carrierBones.RightLeg.rotation.z = -0.68 * p;
         }
 
-        // Defender launches horizontally through the ball-carrier's knee
         defenderRoot.position.set(0.42 - 0.38 * p, 0.12 * (1 - p), 0.16 - 0.14 * p);
         defenderRoot.lookAt(-0.3, 0.25, -0.2);
-        defenderRoot.rotation.x = 1.18; // Horizontal diving tackle
+        defenderRoot.rotation.x = 1.18;
         if (defenderBones.LeftArm) defenderBones.LeftArm.rotation.x = -1.35;
         if (defenderBones.RightArm) defenderBones.RightArm.rotation.x = -1.35;
       } else if (activeTarget === 'ankle') {
-        // Diving Shoestring Tackle Pinning Right Ankle / Cleat
-        phaseEl.innerText = `💥 DIRECT HIT: Diving Tackle Pins Right ${currentPlayer ? currentPlayer.BodyPart : 'Ankle'} on Turf`;
+        phaseEl.innerText = `💥 DIRECT HIT: Shoestring Tackle Pins Right ${currentPlayer ? currentPlayer.BodyPart : 'Ankle'} in Turf`;
         carrierRoot.position.set(-0.18 * p, -0.36 * p, -0.08 * p);
         carrierRoot.rotation.y = 0.40;
         carrierRoot.rotation.x = 0.35 * p;
 
         if (carrierBones.RightLeg) carrierBones.RightLeg.rotation.x = 0.85 * p;
         if (carrierBones.RightFoot) {
-          carrierBones.RightFoot.rotation.z = -0.92 * p; // Severe ankle inversion roll!
+          carrierBones.RightFoot.rotation.z = -0.92 * p;
           carrierBones.RightFoot.rotation.x = 0.55 * p;
         }
 
@@ -879,8 +1212,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
         if (defenderBones.LeftArm) defenderBones.LeftArm.rotation.x = -1.45;
         if (defenderBones.RightArm) defenderBones.RightArm.rotation.x = -1.45;
       } else {
-        // High Helmet / Shoulder-to-Upper-Body Collision
-        phaseEl.innerText = `💥 DIRECT HIT: High Shoulder/Helmet Collision (${currentPlayer ? currentPlayer.BodyPart : 'Upper Body'})`;
+        phaseEl.innerText = `💥 DIRECT HIT: High Helmet/Shoulder Collision (${currentPlayer ? currentPlayer.BodyPart : 'Upper Body'})`;
         carrierRoot.position.set(-0.28 * p, -0.18 * p, -0.15 * p);
         carrierRoot.rotation.y = 0.45;
         if (carrierBones.Spine1) {
@@ -904,7 +1236,15 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
       carrierRoot.position.set(-0.24, -0.46, -0.12);
       carrierRoot.rotation.y = 0.45;
       shockMat.opacity = Math.max(0, 0.35 * (1 - p));
-      speedBadge.innerText = 'Whistle Blown — Injury Timeout';
+      impactFlashLight.intensity = 0;
+      forceArrow.visible = false;
+
+      document.getElementById('bioHR').innerText = baseHR;
+      document.getElementById('bioGRF').innerText = Math.round(180 * (1 - p * 0.6));
+      document.getElementById('bioAngle').innerText = peakAngle.toFixed(1);
+      document.getElementById('bioStress').innerText = peakStress;
+
+      speedBadge.innerText = 'Whistle Blown — Medical Spotter Alert';
       phaseEl.className = 'text-xs font-semibold text-amber-300';
       phaseEl.innerText = `Phase 3: Athlete Down on Turf — Favoring Injured ${currentPlayer ? currentPlayer.BodyPart : 'Joint'}`;
 
@@ -921,7 +1261,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
       defenderRoot.rotation.x = 1.38;
     }
 
-    // Update world matrices so helmets, football, and joint sensors track exact bones
+    // Update world matrices so helmets, shoulder pads, football & sensors track exact bones
     carrierRoot.updateMatrixWorld(true);
     defenderRoot.updateMatrixWorld(true);
 
@@ -933,6 +1273,14 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
       defenderBones.Head.getWorldPosition(defHelmet.position);
       defenderBones.Head.getWorldQuaternion(defHelmet.quaternion);
     }
+    if (carrierBones.Spine2) {
+      carrierBones.Spine2.getWorldPosition(carrierPads.rig.position);
+      carrierBones.Spine2.getWorldQuaternion(carrierPads.rig.quaternion);
+    }
+    if (defenderBones.Spine2) {
+      defenderBones.Spine2.getWorldPosition(defPads.rig.position);
+      defenderBones.Spine2.getWorldQuaternion(defPads.rig.quaternion);
+    }
     if (carrierBones.RightForeArm) {
       carrierBones.RightForeArm.getWorldPosition(footballGroup.position);
       carrierBones.RightForeArm.getWorldQuaternion(footballGroup.quaternion);
@@ -940,7 +1288,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
       footballGroup.translateZ(0.06);
     }
 
-    // Track exact injured bone in world space for glowing hotspot + flying turf debris
+    // Track exact injured bone in world space for hotspot, 3D force vector & turf spray
     const targetBone =
       activeTarget === 'knee' ? (carrierBones.RightLeg || carrierBones.Hips) :
       activeTarget === 'ankle' ? (carrierBones.RightFoot || carrierBones.RightLeg) :
@@ -953,19 +1301,33 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
       pulseRing.position.copy(jointPos);
       pulseRing.lookAt(camera.position);
       shockRing.position.set(jointPos.x, 0.018, jointPos.z);
+      impactFlashLight.position.set(jointPos.x, jointPos.y + 0.25, jointPos.z + 0.2);
 
-      // Animate flying turf clods & impact sparks during collision window
+      // 3D Force Vector Arrow + Flying SBR Rubber / Grass Sod Spray during collision
       if (t >= 1.65 && t < 2.55) {
         const dtHit = t - 1.65;
+        if (t < 2.40) {
+          forceArrow.visible = true;
+          forceArrow.position.copy(jointPos);
+          const vecDir = activeTarget === 'knee'
+            ? new THREE.Vector3(-0.78, 0.48, -0.35).normalize()
+            : activeTarget === 'ankle'
+              ? new THREE.Vector3(-0.55, 0.80, -0.22).normalize()
+              : new THREE.Vector3(-0.82, 0.35, -0.42).normalize();
+          forceArrow.setDirection(vecDir);
+          const arrowLen = Math.max(0.45, Math.min(1.35, (peakGRF / 1800) * 0.85 * Math.sin(((t - 1.65) / 0.75) * Math.PI + 0.2)));
+          forceArrow.setLength(arrowLen, 0.20, 0.12);
+        }
+
         debrisList.forEach(d => {
-          d.mat.opacity = Math.max(0, 1 - dtHit * 1.15);
+          d.mat.opacity = Math.max(0, 1 - dtHit * 1.12);
           d.mesh.position.set(
             jointPos.x + d.vx * dtHit,
-            Math.max(0.02, jointPos.y + d.vy * dtHit - 2.2 * dtHit * dtHit),
+            Math.max(0.018, jointPos.y * 0.65 + d.vy * dtHit - 2.35 * dtHit * dtHit),
             jointPos.z + d.vz * dtHit
           );
-          d.mesh.rotation.x += 0.15;
-          d.mesh.rotation.y += 0.15;
+          d.mesh.rotation.x += 0.18;
+          d.mesh.rotation.y += 0.16;
         });
       }
     }
@@ -978,6 +1340,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
 
   function restartReplay() {
     replayTime = 0;
+    prevReplayTime = 0;
     isPlayingReplay = true;
     document.getElementById('playBtnText').innerText = 'Pause Replay';
   }
@@ -1000,12 +1363,12 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
     currentPlayer = p;
     activeTarget = p.target;
 
-    document.getElementById('statPosition').innerText = `${p.team} • ${p.RosterPosition}`;
+    document.getElementById('statPosition').innerText = `${p.team} • ${p.RosterPosition} (#${computeJerseyNumber(p)})`;
     document.getElementById('statSurface').innerText = p.Surface + ' Turf';
     document.getElementById('statBodyPart').innerText = p.BodyPart;
     document.getElementById('statDays').innerText = p.days_missed;
 
-    applyTeamColors(p.team, p.Surface);
+    applyTeamColors(p.team, p.Surface, p);
 
     document.getElementById('censusState').innerText = p.state_name;
     document.getElementById('censusPop').innerText = (Number(p.state_pop) / 1e6).toFixed(2) + 'M';
@@ -1142,6 +1505,7 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
       replayTime += dt * replaySpeed;
       if (replayTime > REPLAY_DURATION) {
         replayTime = 0;
+        prevReplayTime = 0;
       }
       document.getElementById('replayScrubber').value = Math.round((replayTime / REPLAY_DURATION) * 100);
       document.getElementById('replayTimeLabel').innerText = replayTime.toFixed(2) + 's';
@@ -1149,11 +1513,33 @@ window.SUMMARY_STATS = {"total_records":133760,"synthetic_pct":51.7,"avg_state_i
 
     updateSkeletalReplay(replayTime);
 
+    // Subtle stadium crowd camera-flash twinkles in the stands
+    const cAttr = crowdGeo.attributes.color;
+    for (let s = 0; s < 4; s++) {
+      const idx = Math.floor(Math.random() * crowdCount);
+      const flash = Math.random() > 0.92 ? 1.0 : 0.68;
+      cAttr.setXYZ(idx, flash, flash === 1.0 ? 1.0 : 0.76, flash === 1.0 ? 1.0 : 0.92);
+    }
+    cAttr.needsUpdate = true;
+
     const scale = 1 + Math.sin(pulseClock) * 0.25;
     pulseRing.scale.set(scale, scale, 1);
 
     controls.update();
-    renderer.render(scene, camera);
+
+    // Apply non-drifting broadcast impact camera shudder on collision
+    if (cameraShake > 0.001) {
+      const sx = (Math.random() - 0.5) * cameraShake;
+      const sy = (Math.random() - 0.5) * cameraShake;
+      camera.position.x += sx;
+      camera.position.y += sy;
+      renderer.render(scene, camera);
+      camera.position.x -= sx;
+      camera.position.y -= sy;
+      cameraShake *= 0.84;
+    } else {
+      renderer.render(scene, camera);
+    }
   }
   requestAnimationFrame(animate);
 
